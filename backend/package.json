@@ -4,9 +4,9 @@
   "main": "index.js",
   "type": "module",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "node --test tests/user.test.js",
     "start": "node server.js",
-    "test": "node --test tests/user.test.js"
+    "dev": "nodemon server.js"
   },
   "keywords": [],
   "author": "",
@@ -17,5 +17,8 @@
     "express": "^5.1.0",
     "sqlite3": "^5.1.7",
     "supertest": "^7.1.1"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.10"
   }
 }

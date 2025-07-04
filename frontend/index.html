@@ -10,6 +10,9 @@
 <body class="bg-light">
   <div class="container py-5">
     <h1 class="mb-4">Cadastro de Clientes</h1>
+
+    <div id="errorMessage" class="alert alert-danger d-none" role="alert"></div>
+
     <form id="userForm" class="row g-3">
       <input type="hidden" id="id" />
       <div class="col-md-4">
@@ -81,7 +84,7 @@
       fetch(`${api}/${id}`, { method: 'DELETE' }).then(loadUsers);
     }
 
-    form.onsubmit = e => {
+    form.onsubmit = async e => {
       e.preventDefault();
       const id = document.getElementById('id').value;
       const name = document.getElementById('name').value;
@@ -91,15 +94,30 @@
       const method = id ? 'PUT' : 'POST';
       const url = id ? `${api}/${id}` : api;
 
-      fetch(url, {
-        method,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
-      }).then(() => {
+      const errorDiv = document.getElementById('errorMessage');
+      errorDiv.classList.add('d-none'); // Oculta o erro anterior
+
+      try {
+        const res = await fetch(url, {
+          method,
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data),
+        });
+
+        const body = await res.json();
+
+        if (!res.ok) {
+          throw new Error(body.error || 'Erro desconhecido');
+        }
+
         form.reset();
         loadUsers();
-      });
+      } catch (err) {
+        errorDiv.textContent = err.message;
+        errorDiv.classList.remove('d-none');
+      }
     };
+
 
     loadUsers();
   </script>
