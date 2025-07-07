@@ -46,9 +46,16 @@ export default class ServiceClient {
       const client = new Client({ ...req.body, id: req.params.id });
       client.validate();
 
-      this.repository.update(req.params.id, client, (err, changes) => {
-        if (err) return res.status(400).json({ error: err.message });
-        res.json({ updated: changes });
+      this.repository.getOneByEmail(client.email, (err, existingUser) => {
+        if (err) return res.status(500).json({ error: err.message });
+        if (existingUser) {
+          return res.status(400).json({ error: 'E-mail já está em uso.' });
+        }
+
+        this.repository.update(req.params.id, client, (err, changes) => {
+          if (err) return res.status(400).json({ error: err.message });
+          res.json({ updated: changes });
+        });
       });
     } catch (err) {
       res.status(400).json({ error: err.message });

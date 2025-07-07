@@ -17,7 +17,7 @@ export default class ClientRepository {
       `INSERT INTO users (name, email, birthDate) VALUES (?, ?, ?)`,
       [client.name, client.email, client.birthDate || null],
       function (err) {
-        callback(err, { id: this?.lastID, ...client });
+        callback(err, { ...client, id: this?.lastID });
       }
     );
   }

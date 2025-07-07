@@ -40,6 +40,12 @@
     const form = document.getElementById('userForm');
     const list = document.getElementById('userList');
 
+    function formatDate(isoDate) {
+      if (!isoDate) return 'N/A';
+      const [year, month, day] = isoDate.split('-');
+      return `${day}/${month}/${year}`;
+    }
+
     function loadUsers() {
       fetch(api)
         .then(res => res.json())
@@ -52,7 +58,7 @@
               <div>
                 <strong>${u.name}</strong> <br>
                 <small>${u.email}</small><br>
-                <small>Nascimento: ${u.birthDate || 'N/A'}</small>
+                <small>Nascimento: ${formatDate(u.birthDate)}</small>
               </div>
               <div>
                 <button class="btn btn-sm btn-info me-1" onclick="view(${u.id})">Ver</button>

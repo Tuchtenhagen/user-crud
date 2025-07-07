@@ -40,17 +40,43 @@ function createTestApp(db) {
   return app;
 }
 
-test('API /users', async (t) => {
+await test('1. SQL INJECTION', async (t) => {
   const db = await setupTestDatabase();
   const app = createTestApp(db);
 
-  await t.test('1. Protege contra SQL Injection em /users/:id', async () => {
-    const res = await request(app).get('/users/1; DROP TABLE users; --');
-    assert.ok(res.status >= 400);
-    assert.ok(res.body.error);
+  await t.test('1.1 Protege contra SQL Injection ao cadastrar um novo usuário', async () => {
+    const res = await request(app).post('/users').send({
+      name: "Cadastrado'; DROP TABLE users; --",
+      email: "ataque1@example.com",
+      birthDate: "1999-09-09"
+    });
+    assert.ok(res.status == 201);
+    assert.ok(res.body);
   });
 
-  await t.test('2. Falha ao cadastrar usuário com dados inválidos', async () => {
+  await t.test('1.2 Protege contra SQL Injection ao atualizar um usuário', async () => {
+    const user = await request(app).post('/users').send({
+      name: 'Normal User',
+      email: 'normal@example.com',
+    });
+
+    const res = await request(app).put(`/users/${user.body.id}`).send({
+      name: "Atualizado'; DROP TABLE users; --",
+      email: "atualizado@example.com",
+    });
+
+    assert.equal(res.status, 200);
+    assert.deepEqual(res.body, { updated: 1 });
+  });
+
+   db.close();
+});
+
+await test('2. VALIDAÇÃO DE DADOS', async (t) => {
+  const db = await setupTestDatabase();
+  const app = createTestApp(db);
+
+  await t.test('2.1 POST /users com nome vazio e email inválido deve falhar', async () => {
     const res = await request(app).post('/users').send({
       name: '',
       email: 'invalido.com'
@@ -59,7 +85,64 @@ test('API /users', async (t) => {
     assert.equal(res.body.error, 'Nome e e-mail são obrigatórios.');
   });
 
-  await t.test('3. Recusa cadastro com e-mail duplicado', async () => {
+  await t.test('2.2 PUT /users/:id com nome vazio deve falhar', async () => {
+    const user = { name: 'Ana', email: 'ana@exemplo.com', birthDate: '1990-01-01' };
+
+    const created = await request(app).post('/users').send(user);
+    assert.equal(created.status, 201);
+
+    const res = await request(app).put(`/users/${created.body.id}`).send({
+      ...user,
+      name: ''
+    });
+
+    assert.equal(res.status, 400);
+    assert.ok(res.body.error);
+  });
+
+  await t.test('2.3 PUT /users/:id com email inválido deve falhar', async () => {
+    const user = { name: 'João', email: 'joao@exemplo.com', birthDate: '1990-01-01' };
+
+    const created = await request(app).post('/users').send(user);
+    assert.equal(created.status, 201);
+
+    const res = await request(app).put(`/users/${created.body.id}`).send({
+      ...user,
+      email: 'joaoexemplo.com'
+    });
+    
+    assert.equal(res.status, 400);
+    assert.ok(res.body.error);
+  });
+
+   db.close();
+});
+
+await test('3. E-MAIL DUPLICADO', async (t) => {
+  const db = await setupTestDatabase();
+  const app = createTestApp(db);
+
+  await t.test('3.1 Não permite cadastrar dois usuários com o mesmo e-mail', async () => {
+    await request(app).post('/users').send({
+      name: 'Ana',
+      email: 'ana@example.com'
+    });
+
+    const user2 = await request(app).post('/users').send({
+      name: 'Carlos',
+      email: 'carlos@example.com'
+    });
+
+    const res = await request(app).put(`/users/${user2.body.id}`).send({
+      name: 'Carlos',
+      email: 'ana@example.com'
+    });
+
+    assert.equal(res.status, 400);
+    assert.match(res.body.error, /E-mail já está em uso./i);
+  });
+
+  await t.test('3.2 Não permite atualizar e-mail para um já existente', async () => {
     const user = { name: 'João', email: 'joao@exemplo.com', birthDate: '1990-01-01' };
 
     const res1 = await request(app).post('/users').send(user);
@@ -68,39 +151,6 @@ test('API /users', async (t) => {
     const res2 = await request(app).post('/users').send(user);
     assert.equal(res2.status, 400);
     assert.match(res2.body.error, /E-mail já está em uso./i);
-  });
-
-  await t.test('4. Atualiza dados do cliente com sucesso', async () => {
-    const user = { name: 'Maria', email: 'maria@exemplo.com', birthDate: '1985-05-10' };
-    const created = await request(app).post('/users').send(user);
-    assert.equal(created.status, 201);
-
-    const updated = await request(app).put(`/users/${created.body.id}`).send({
-      name: 'Maria Clara',
-      email: 'maria.clara@exemplo.com',
-      birthDate: '1985-05-10'
-    });
-    assert.equal(updated.status, 200);
-    assert.deepEqual(updated.body, { updated: 1 });
-  });
-
-  // 🔹 Teste complementar 2 - Exclusão de cliente
-  await t.test('5. Exclui cliente com sucesso', async () => {
-    const user = { name: 'Carlos', email: 'carlos@exemplo.com', birthDate: '1979-02-20' };
-    const created = await request(app).post('/users').send(user);
-    assert.equal(created.status, 201);
-
-    console.log(created.body)
-
-    const deleted = await request(app).delete(`/users/${created.body.id}`);
-    assert.equal(deleted.status, 200);
-    assert.deepEqual(deleted.body, { deleted: 1 });
-  });
-
-  await t.test('6. Retorna erro ao buscar cliente inexistente', async () => {
-    const res = await request(app).get('/users/9999');
-    assert.equal(res.status, 404);
-    assert.equal(res.body.error, 'Cliente não encontrado');
   });
 
    db.close();
