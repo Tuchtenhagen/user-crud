@@ -60,7 +60,7 @@ export default class ServiceClient {
       // Verifica se o novo e-mail já está sendo usado por outro cliente
       this.repository.getOneByEmail(client.email, (err, existingUser) => {
         if (err) return res.status(500).json({ error: err.message });
-        if (existingUser) {
+        if (existingUser && existingUser.id.toString() !== req.params.id) {
           return res.status(400).json({ error: 'E-mail já está em uso.' });
         }
 
