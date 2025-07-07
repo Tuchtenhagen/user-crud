@@ -70,5 +70,38 @@ test('API /users', async (t) => {
     assert.match(res2.body.error, /E-mail já está em uso./i);
   });
 
+  await t.test('4. Atualiza dados do cliente com sucesso', async () => {
+    const user = { name: 'Maria', email: 'maria@exemplo.com', birthDate: '1985-05-10' };
+    const created = await request(app).post('/users').send(user);
+    assert.equal(created.status, 201);
+
+    const updated = await request(app).put(`/users/${created.body.id}`).send({
+      name: 'Maria Clara',
+      email: 'maria.clara@exemplo.com',
+      birthDate: '1985-05-10'
+    });
+    assert.equal(updated.status, 200);
+    assert.deepEqual(updated.body, { updated: 1 });
+  });
+
+  // 🔹 Teste complementar 2 - Exclusão de cliente
+  await t.test('5. Exclui cliente com sucesso', async () => {
+    const user = { name: 'Carlos', email: 'carlos@exemplo.com', birthDate: '1979-02-20' };
+    const created = await request(app).post('/users').send(user);
+    assert.equal(created.status, 201);
+
+    console.log(created.body)
+
+    const deleted = await request(app).delete(`/users/${created.body.id}`);
+    assert.equal(deleted.status, 200);
+    assert.deepEqual(deleted.body, { deleted: 1 });
+  });
+
+  await t.test('6. Retorna erro ao buscar cliente inexistente', async () => {
+    const res = await request(app).get('/users/9999');
+    assert.equal(res.status, 404);
+    assert.equal(res.body.error, 'Cliente não encontrado');
+  });
+
    db.close();
 });
