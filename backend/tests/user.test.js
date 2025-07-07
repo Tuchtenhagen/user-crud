@@ -9,6 +9,7 @@ import ClientRepository from '../repositories/ClientRepository.js';
 import ServiceClient from '../service/ServiceClient.js';
 
 
+// Função auxiliar para criar e preparar o banco em memória com a tabela `users`
 async function setupTestDatabase() {
   return new Promise((resolve, reject) => {
     const db = new sqlite3.Database(':memory:');
@@ -28,6 +29,7 @@ async function setupTestDatabase() {
   });
 }
 
+// Cria o app express com rotas e dependências injetadas
 function createTestApp(db) {
   const app = express();
   app.use(express.json());
@@ -40,18 +42,19 @@ function createTestApp(db) {
   return app;
 }
 
+// Caso de Teste 1: Testes de proteção contra SQL Injection
 await test('1. SQL INJECTION', async (t) => {
   const db = await setupTestDatabase();
   const app = createTestApp(db);
 
   await t.test('1.1 Protege contra SQL Injection ao cadastrar um novo usuário', async () => {
     const res = await request(app).post('/users').send({
-      name: "Cadastrado'; DROP TABLE users; --",
+      name: "Cadastrado'; DROP TABLE users; --", // tentativa de injeção
       email: "ataque1@example.com",
       birthDate: "1999-09-09"
     });
-    assert.ok(res.status == 201);
-    assert.ok(res.body);
+    assert.ok(res.status == 201); // Ainda assim, deve ser tratado como string válida
+    assert.ok(res.body); // Retorna resposta esperada
   });
 
   await t.test('1.2 Protege contra SQL Injection ao atualizar um usuário', async () => {
@@ -65,21 +68,22 @@ await test('1. SQL INJECTION', async (t) => {
       email: "atualizado@example.com",
     });
 
-    assert.equal(res.status, 200);
+    assert.equal(res.status, 200);  // Atualização deve ser bem-sucedida
     assert.deepEqual(res.body, { updated: 1 });
   });
 
    db.close();
 });
 
+// Caso de Teste 2: Validação de dados de entrada
 await test('2. VALIDAÇÃO DE DADOS', async (t) => {
   const db = await setupTestDatabase();
   const app = createTestApp(db);
 
   await t.test('2.1 POST /users com nome vazio e email inválido deve falhar', async () => {
     const res = await request(app).post('/users').send({
-      name: '',
-      email: 'invalido.com'
+      name: '', // nome inválido
+      email: 'invalido.com' // email mal formatado
     });
     assert.equal(res.status, 400);
     assert.equal(res.body.error, 'Nome e e-mail são obrigatórios.');
@@ -93,7 +97,7 @@ await test('2. VALIDAÇÃO DE DADOS', async (t) => {
 
     const res = await request(app).put(`/users/${created.body.id}`).send({
       ...user,
-      name: ''
+      name: '' // nome inválido
     });
 
     assert.equal(res.status, 400);
@@ -109,7 +113,7 @@ await test('2. VALIDAÇÃO DE DADOS', async (t) => {
 
     const res = await request(app).put(`/users/${created.body.id}`).send({
       ...user,
-      email: 'joaoexemplo.com'
+      email: 'joaoexemplo.com' // email inválido
     });
     
     assert.equal(res.status, 400);
@@ -120,6 +124,7 @@ await test('2. VALIDAÇÃO DE DADOS', async (t) => {
    db.close();
 });
 
+// Caso de Teste 3: Verificação de unicidade do e-mail
 await test('3. E-MAIL DUPLICADO', async (t) => {
   const db = await setupTestDatabase();
   const app = createTestApp(db);
@@ -137,7 +142,7 @@ await test('3. E-MAIL DUPLICADO', async (t) => {
 
     const res = await request(app).put(`/users/${user2.body.id}`).send({
       name: 'Carlos',
-      email: 'ana@example.com'
+      email: 'ana@example.com' // e-mail já usado
     });
 
     assert.equal(res.status, 400);
@@ -150,7 +155,7 @@ await test('3. E-MAIL DUPLICADO', async (t) => {
     const res1 = await request(app).post('/users').send(user);
     assert.equal(res1.status, 201);
 
-    const res2 = await request(app).post('/users').send(user);
+    const res2 = await request(app).post('/users').send(user); // tentativa duplicada
     assert.equal(res2.status, 400);
     assert.match(res2.body.error, /E-mail já está em uso./i);
   });
