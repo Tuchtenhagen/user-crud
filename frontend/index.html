@@ -51,19 +51,19 @@
         .then(res => res.json())
         .then(users => {
           list.innerHTML = '';
-          users.forEach(u => {
+          users.forEach(user => {
             const li = document.createElement('li');
             li.className = 'list-group-item d-flex justify-content-between align-items-center';
             li.innerHTML = `
               <div>
-                <strong>${u.name}</strong> <br>
-                <small>${u.email}</small><br>
-                <small>Nascimento: ${formatDate(u.birthDate)}</small>
+                <strong>${user.name}</strong> <br>
+                <small>${user.email}</small><br>
+                <small>Nascimento: ${formatDate(user.birthDate)}</small>
               </div>
               <div>
-                <button class="btn btn-sm btn-info me-1" onclick="view(${u.id})">Ver</button>
-                <button class="btn btn-sm btn-warning me-1" onclick="edit(${u.id}, '${u.name}', '${u.email}', '${u.birthDate || ''}')">Editar</button>
-                <button class="btn btn-sm btn-danger" onclick="del(${u.id})">Excluir</button>
+                <button class="btn btn-sm btn-info me-1" onclick="view(${user.id})">Ver</button>
+                <button class="btn btn-sm btn-warning me-1" onclick="edit(${user.id}, '${user.name}', '${user.email}', '${user.birthDate || ''}')">Editar</button>
+                <button class="btn btn-sm btn-danger" onclick="del(${user.id}, '${user.name}')">Excluir</button>
               </div>
             `;
             list.appendChild(li);
@@ -74,8 +74,8 @@
     function view(id) {
       fetch(`${api}/${id}`)
         .then(res => res.json())
-        .then(u => {
-          alert(`Nome: ${u.name}\nEmail: ${u.email}\nNascimento: ${u.birthDate || 'N/A'}`);
+        .then(user => {
+          alert(`Nome: ${user.name}\nEmail: ${user.email}\nNascimento: ${user.birthDate || 'N/A'}`);
         });
     }
 
@@ -86,8 +86,10 @@
       document.getElementById('birthDate').value = birthDate;
     }
 
-    function del(id) {
-      fetch(`${api}/${id}`, { method: 'DELETE' }).then(loadUsers);
+    function del(id, name) {
+      if (confirm(`Tem certeza que deseja excluir o seguinte cliente: ${name} ?`)) {
+        fetch(`${api}/${id}`, { method: 'DELETE' }).then(loadUsers);
+      }
     }
 
     form.onsubmit = async e => {

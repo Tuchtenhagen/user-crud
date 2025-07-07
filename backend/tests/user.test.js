@@ -98,6 +98,7 @@ await test('2. VALIDAÇÃO DE DADOS', async (t) => {
 
     assert.equal(res.status, 400);
     assert.ok(res.body.error);
+    assert.equal(res.body.error, 'Nome e e-mail são obrigatórios.');
   });
 
   await t.test('2.3 PUT /users/:id com email inválido deve falhar', async () => {
@@ -113,6 +114,7 @@ await test('2. VALIDAÇÃO DE DADOS', async (t) => {
     
     assert.equal(res.status, 400);
     assert.ok(res.body.error);
+    assert.equal(res.body.error, 'E-mail inválido.');
   });
 
    db.close();
@@ -122,7 +124,7 @@ await test('3. E-MAIL DUPLICADO', async (t) => {
   const db = await setupTestDatabase();
   const app = createTestApp(db);
 
-  await t.test('3.1 Não permite cadastrar dois usuários com o mesmo e-mail', async () => {
+  await t.test('3.1 Não permite atualizar e-mail para um já existente', async () => {
     await request(app).post('/users').send({
       name: 'Ana',
       email: 'ana@example.com'
@@ -142,7 +144,7 @@ await test('3. E-MAIL DUPLICADO', async (t) => {
     assert.match(res.body.error, /E-mail já está em uso./i);
   });
 
-  await t.test('3.2 Não permite atualizar e-mail para um já existente', async () => {
+  await t.test('3.2 Não permite cadastrar dois usuários com o mesmo e-mail', async () => {
     const user = { name: 'João', email: 'joao@exemplo.com', birthDate: '1990-01-01' };
 
     const res1 = await request(app).post('/users').send(user);
